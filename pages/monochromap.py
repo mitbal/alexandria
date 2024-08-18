@@ -17,7 +17,7 @@ with st.form('canvas'):
         lat = st.number_input('Input Latitude', value=-6.1944)
         lon = st.number_input('Input Longitude', value=106.8229)
         rad = st.number_input('Input Radius', value=5, min_value=0, max_value=100)
-        alpha = st.number_input('Input Transparency', value=.25)
+        alpha = st.number_input('Input Transparency', value=.25, min_value=.0, max_value=1.00)
         color = st.color_picker('Select Color', value='#ff0000')
 
     elif shape == 'Line':
@@ -25,9 +25,13 @@ with st.form('canvas'):
         with cols[0]:
             lat1 = st.number_input('Input Lat Point 1', value=-6.0686695, min_value=-180., max_value=180.)
             lon1 = st.number_input('Input Lon Point 1', value=105.8847784, min_value=-180., max_value=180.)
+            rad = st.number_input('Input Line Width', value=5, min_value=0, max_value=100)
+            color = st.color_picker('Input Line Color', value='#ff0000')
+
         with cols[1]:
             lat2 = st.number_input('Input Lat Point 2', value=-7.693067, min_value=-180., max_value=180.)
             lon2 = st.number_input('Input Lon Point 2', value=113.9266419, min_value=-180., max_value=180.)
+            alpha = st.number_input('Input Line Transparency', value=.25, min_value=.0, max_value=1.00)
 
     submit = st.form_submit_button('Add to map')
     if submit:
@@ -38,7 +42,7 @@ with st.form('canvas'):
         if shape == 'Point':
             obj = mono.Point((float(lon), float(lat)), f'{color}{int(alpha*256):02x}', rad)
         elif shape == 'Line':
-            obj = mono.Line(coords=[(lon1, lat1), (lon2, lat2)], color='#fb294344', width=5)
+            obj = mono.Line(coords=[(lon1, lat1), (lon2, lat2)], color=f'{color}{int(alpha*256):02x}', width=rad)
         st.session_state['peta'].add_feature(obj)
 
 if 'peta' in st.session_state:
