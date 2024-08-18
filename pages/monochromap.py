@@ -16,6 +16,10 @@ with st.form('canvas'):
     if shape == 'Point':
         lat = st.number_input('Input Latitude', value=-6.1944)
         lon = st.number_input('Input Longitude', value=106.8229)
+        rad = st.number_input('Input Radius', value=5, min_value=0, max_value=100)
+        alpha = st.number_input('Input Transparency', value=.25)
+        color = st.color_picker('Select Color', value='#ff0000')
+
     elif shape == 'Line':
         cols = st.columns(2)
         with cols[0]:
@@ -32,7 +36,7 @@ with st.form('canvas'):
             st.session_state['peta'] = mono.MonochroMap(api_key=os.environ['STADIA_API_KEY'])
 
         if shape == 'Point':
-            obj = mono.Point((float(lon), float(lat)), '#fb294344', 5)
+            obj = mono.Point((float(lon), float(lat)), f'{color}{int(alpha*256):02x}', rad)
         elif shape == 'Line':
             obj = mono.Line(coords=[(lon1, lat1), (lon2, lat2)], color='#fb294344', width=5)
         st.session_state['peta'].add_feature(obj)
