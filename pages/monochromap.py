@@ -4,8 +4,13 @@ import monochromap as mono
 
 st.title('Monochromap')
 
-shape = st.selectbox('Select type of object', ['Point', 'Line', 'Image'])
 
+reset_button = st.button(label='Reset Map')
+if reset_button:
+    if 'peta' in st.session_state:
+        del st.session_state['peta']
+
+shape = st.selectbox('Select type of object', ['Point', 'Line', 'Image'])
 with st.form('canvas'):
 
     if shape == 'Point':
