@@ -33,6 +33,11 @@ with st.form('canvas'):
             lon2 = st.number_input('Input Lon Point 2', value=113.9266419, min_value=-180., max_value=180.)
             alpha = st.number_input('Input Line Transparency', value=.25, min_value=.0, max_value=1.00)
 
+    elif shape == 'Image':
+        icon = st.file_uploader('Select Image File', type=['png', 'jpg'])
+        lat = st.number_input('Input Latitude', value=-6.1944, min_value=-180., max_value=180.)
+        lon = st.number_input('Input Longitude', value=106.8229, min_value=-180., max_value=180.)
+
     submit = st.form_submit_button('Add to map')
     if submit:
 
@@ -43,6 +48,8 @@ with st.form('canvas'):
             obj = mono.Point((float(lon), float(lat)), f'{color}{int(alpha*256):02x}', rad)
         elif shape == 'Line':
             obj = mono.Line(coords=[(lon1, lat1), (lon2, lat2)], color=f'{color}{int(alpha*256):02x}', width=rad)
+        elif shape == 'Image':
+            obj = mono.IconMarker(coord=(float(lon), float(lat)), file_path=icon, offset_x=0, offset_y=0)
         st.session_state['peta'].add_feature(obj)
 
 if 'peta' in st.session_state:
