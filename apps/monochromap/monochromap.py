@@ -56,4 +56,4 @@ if 'peta' in st.session_state:
     img = st.session_state['peta'].render()
     st.image(img)
 else:
-    st.image('pages/monochromap_placeholder.png')
+    st.image('apps/monochromap/monochromap_placeholder.png')
