@@ -4,7 +4,7 @@ import streamlit as st
 
 st.set_page_config(layout='wide')
 
-st.image('pages/raftel_banner.png', width=1000)
+st.image('apps/raftel/raftel_banner.png', width=1000)
 st.title('Raftel')
 
 cols = st.columns([0.25, 0.75])
