@@ -10,7 +10,7 @@ if reset_button:
     if 'peta' in st.session_state:
         del st.session_state['peta']
 
-cols = st.columns([0.25, 0.75])
+cols = st.columns([0.3, 0.7])
 with cols[0]:
     
     shape = st.selectbox('Select type of object', ['Point', 'Line', 'Image'])
@@ -20,7 +20,7 @@ with cols[0]:
             lat = st.number_input('Input Latitude', value=-6.1944)
             lon = st.number_input('Input Longitude', value=106.8229)
             rad = st.number_input('Input Radius', value=5, min_value=0, max_value=100)
-            alpha = st.number_input('Input Transparency', value=.25, min_value=.0, max_value=1.00)
+            alpha = st.number_input('Input Transparency', value=.95, min_value=.0, max_value=1.00)
             color = st.color_picker('Select Color', value='#ff0000')
 
         elif shape == 'Line':
@@ -34,7 +34,7 @@ with cols[0]:
             with cols_form[1]:
                 lat2 = st.number_input('Input Lat Point 2', value=-7.693067, min_value=-180., max_value=180.)
                 lon2 = st.number_input('Input Lon Point 2', value=113.9266419, min_value=-180., max_value=180.)
-                alpha = st.number_input('Input Line Transparency', value=.25, min_value=.0, max_value=1.00)
+                alpha = st.number_input('Input Line Transparency', value=.95, min_value=.0, max_value=1.00)
 
         elif shape == 'Image':
             icon = st.file_uploader('Select Image File', type=['png', 'jpg'])
