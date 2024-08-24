@@ -43,17 +43,22 @@ with cols[0]:
 
         submit = st.form_submit_button('Add to map')
         if submit:
-
-            if 'peta' not in st.session_state:
-                st.session_state['peta'] = mono.MonochroMap(api_key=os.environ['STADIA_API_KEY'])
-
+            error = False
             if shape == 'Point':
                 obj = mono.Point((float(lon), float(lat)), f'{color}{int(alpha*256):02x}', rad)
             elif shape == 'Line':
                 obj = mono.Line(coords=[(lon1, lat1), (lon2, lat2)], color=f'{color}{int(alpha*256):02x}', width=rad)
             elif shape == 'Image':
-                obj = mono.IconMarker(coord=(float(lon), float(lat)), file_path=icon, offset_x=0, offset_y=0)
-            st.session_state['peta'].add_feature(obj)
+                if icon is not None:
+                    obj = mono.IconMarker(coord=(float(lon), float(lat)), file_path=icon, offset_x=0, offset_y=0)
+                else:
+                    st.error('Please select an image first before adding to the map')
+                    error = True
+            
+            if not error:
+                if 'peta' not in st.session_state:
+                    st.session_state['peta'] = mono.MonochroMap(api_key=os.environ['STADIA_API_KEY'])
+                st.session_state['peta'].add_feature(obj)
 
 with cols[1]:
     if 'peta' in st.session_state:
