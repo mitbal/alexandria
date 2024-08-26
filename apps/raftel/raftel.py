@@ -4,7 +4,6 @@ import streamlit as st
 
 st.set_page_config(layout='wide')
 
-st.image('apps/raftel/raftel_banner.png', width=1000)
 st.title('Raftel')
 api_key = os.environ['STADIA_API_KEY']
 
