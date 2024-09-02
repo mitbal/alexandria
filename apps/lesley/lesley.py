@@ -1,17 +1,16 @@
-import lesley
-import streamlit as st
+import calendar
 
 import numpy as np
 import pandas as pd
+import streamlit as st
 
-import calendar
+import lesley
 
 st.title('Lesley')
 
-cmaps = ['viridis', 'plasma', 'inferno', 'magma', 'cividis', 'YlGn']
 
-use_random = st.radio('Use Random Data?', ['True', 'False'])
-if use_random == 'True':
+use_random = st.radio('Data Input', ['Use Random Data', 'Upload CSV'])
+if use_random == 'Use Random Data':
     dates = pd.date_range(start='2024-01-01', end='2024-12-31')
     values = np.random.randint(0, 10, size=len(dates))
 else:
@@ -25,6 +24,7 @@ else:
     else:
         st.stop()
 
+cmaps = ['viridis', 'plasma', 'inferno', 'magma', 'cividis', 'YlGn']
 cmap = st.selectbox('Select Color Maps', cmaps, index=5)
 
 st.write('Calendar Heatmap function')
