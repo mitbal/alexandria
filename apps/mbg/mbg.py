@@ -1,3 +1,5 @@
+import math
+
 import streamlit as st
 import altair as alt
 import pandas as pd
@@ -27,39 +29,65 @@ import pandas as pd
 # ---------------------------------------------------------------------------
  
 def _svg_to_data_uri(svg_path: str | Path) -> str:
-    """Read an SVG file and return a data-URI string usable in <img src=...>."""
+    """Read an SVG file and return a base64 data-URI usable as an image src."""
     svg_text = Path(svg_path).read_text(encoding="utf-8")
- 
-    # Ensure the SVG has an explicit width/height so Altair scales it
-    # (add them only if missing)
     if 'width=' not in svg_text:
         svg_text = svg_text.replace('<svg', '<svg width="100"', 1)
     if 'height=' not in svg_text:
         svg_text = svg_text.replace('<svg', '<svg height="100"', 1)
- 
     encoded = base64.b64encode(svg_text.encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{encoded}"
  
  
-def _expand_to_icon_rows(df: pd.DataFrame) -> pd.DataFrame:
+def _expand_to_icon_rows(
+    df: pd.DataFrame,
+    max_per_row: int,
+) -> pd.DataFrame:
     """
-    Expand the input dataframe so there is one row per icon to draw.
+    Expand the dataframe so each icon gets its own row, with wrapping.
  
-    Input columns : [category (str), value (int/float)]
-    Output columns: [category, value, icon_index]
-        where icon_index ∈ [0, value)
+    Output columns
+    --------------
+    category   : original category label
+    value      : original numeric value
+    col        : x position within a wrapped row  (0 .. max_per_row-1)
+    y_key      : composite string used as Altair's Y ordinal field,
+                 e.g. "Apples||0", "Apples||1" for wrap rows 0 and 1
+    y_sort_key : integer used to keep wrap-rows in the correct order
     """
     cat_col, val_col = df.columns[0], df.columns[1]
     rows = []
+    sort_counter = 0
+ 
     for _, row in df.iterrows():
         n = int(round(row[val_col]))
+        n_wrap_rows = max(1, math.ceil(n / max_per_row))
+ 
         for i in range(n):
+            wrap_row = i // max_per_row
+            col_pos  = i %  max_per_row
             rows.append({
-                "category":   row[cat_col],
+                "category":   str(row[cat_col]),
                 "value":      n,
-                "icon_index": i,   # column position (0-based)
+                "col":        col_pos,
+                "wrap_row":   wrap_row,
+                "y_key":      f"{row[cat_col]}||{wrap_row}",
+                "y_sort_key": sort_counter + wrap_row,
             })
+ 
+        sort_counter += n_wrap_rows
+ 
     return pd.DataFrame(rows)
+ 
+ 
+def _build_y_sort_order(expanded: pd.DataFrame) -> list[str]:
+    """Return y_key values sorted by y_sort_key (ascending = top-to-bottom)."""
+    order_df = (
+        expanded[["y_key", "y_sort_key"]]
+        .drop_duplicates()
+        .sort_values("y_sort_key")
+    )
+    return order_df["y_key"].tolist()
  
  
 # ---------------------------------------------------------------------------
@@ -70,45 +98,44 @@ def plot_pictograph(
     df: pd.DataFrame,
     svg_path: str | Path,
     *,
-    icon_size: int = 40,
-    icon_spacing: int = 6,
+    icon_size: int = 36,
+    icon_spacing: int = 2,
+    max_per_row: int = 20,
     title: str = "Pictograph Chart",
-    color: str = "#4C78A8",
     background: str = "white",
     label_font_size: int = 13,
-    value_label: bool = True,
+    value_label: bool = False,
 ) -> alt.Chart:
     """
-    Build an isotype / pictograph Altair chart.
+    Build an isotype / pictograph Altair chart with row-wrapping support.
  
     Parameters
     ----------
     df : pd.DataFrame
-        Two-column dataframe.  Column 0 = category (str),
-        Column 1 = numeric value (non-negative integer).
+        Two-column dataframe. Column 0 = category (str),
+        column 1 = numeric value (non-negative number).
     svg_path : str or Path
-        Path to the SVG icon file.  The icon is repeated `value` times
-        per category row.
+        Path to the SVG icon file.
     icon_size : int
-        Rendered width *and* height of each icon in pixels.
+        Rendered width & height of each icon in pixels (default 36).
     icon_spacing : int
-        Extra horizontal gap (px) between icons beyond their natural width.
+        Extra horizontal gap in px between icons (default 2).
+    max_per_row : int
+        Maximum icons per line before wrapping to a new sub-row (default 20).
+        Set higher to allow longer rows, lower to force earlier wrapping.
     title : str
         Chart title.
-    color : str
-        Tint colour applied to every icon via CSS filter trick where possible.
-        (Altair mark_image does not support fill, so tinting is best-effort.)
     background : str
         Chart background colour.
     label_font_size : int
         Font size for category axis labels.
     value_label : bool
-        Whether to show the numeric total at the end of each row.
+        Show the numeric total to the right of the last icon (default False).
  
     Returns
     -------
-    alt.LayerChart
-        An Altair chart object.  Call .show() or .save("out.html").
+    alt.Chart
+        Altair chart. Call .show() or .save("out.html").
     """
     # --- validation ---------------------------------------------------------
     if df.shape[1] < 2:
@@ -118,52 +145,40 @@ def plot_pictograph(
  
     if not pd.api.types.is_numeric_dtype(df[val_col]):
         raise TypeError(f"Column '{val_col}' must be numeric.")
- 
     if (df[val_col] < 0).any():
         raise ValueError("All values must be >= 0.")
  
-    max_val = int(df[val_col].max())
-    if max_val > 200:
-        raise ValueError(
-            f"Maximum value is {max_val}. Pictograph charts work best "
-            "with values ≤ 200 to keep the chart readable."
-        )
- 
-    # --- build data ---------------------------------------------------------
-    data = _expand_to_icon_rows(df[[cat_col, val_col]])
+    # --- expand data --------------------------------------------------------
+    data = _expand_to_icon_rows(df[[cat_col, val_col]], max_per_row)
     data_uri = _svg_to_data_uri(svg_path)
  
-    step = icon_size + icon_spacing          # px per icon column
-    row_height = icon_size + icon_spacing    # px per category row
+    y_order = _build_y_sort_order(data)
  
-    # Total chart width: enough to fit the widest row
-    chart_width = max_val * step + 80        # 80px buffer for labels
-    chart_height = df.shape[0] * row_height + 60
+    step       = icon_size + icon_spacing
+    row_height = icon_size + max(icon_spacing, 4)
+ 
+    # Total wrap-rows across all categories
+    total_wrap_rows = data[["category", "wrap_row"]].drop_duplicates().shape[0]
+ 
+    chart_width  = max_per_row * step + 60
+    chart_height = total_wrap_rows * row_height + 40
  
     # --- icon layer ---------------------------------------------------------
     icon_layer = (
         alt.Chart(data)
-        .mark_image(
-            width=icon_size,
-            height=icon_size,
-        )
+        .mark_image(width=icon_size, height=icon_size)
         .encode(
             x=alt.X(
-                "icon_index:Q",
-                scale=alt.Scale(domain=[-0.5, max_val - 0.5]),
+                "col:Q",
+                scale=alt.Scale(domain=[-0.5, max_per_row - 0.5]),
                 axis=alt.Axis(
-                    title=None,
-                    labels=False,
-                    ticks=False,
-                    grid=False,
-                    domain=False,
+                    title=None, labels=False, ticks=False,
+                    grid=False, domain=False,
                 ),
             ),
             y=alt.Y(
-                "category:N",
-                sort=alt.EncodingSortField(
-                    field=val_col, op="max", order="descending"
-                ),
+                "y_key:N",
+                sort=y_order,
                 axis=alt.Axis(
                     title=None,
                     labelFontSize=label_font_size,
@@ -171,6 +186,13 @@ def plot_pictograph(
                     domain=False,
                     grid=False,
                     labelPadding=8,
+                    # Show label only for the first wrap-row of each category
+                    labelExpr=(
+                        "indexof(datum.value, '||') >= 0 ? "
+                        "(split(datum.value, '||')[1] == '0' ? "
+                        "split(datum.value, '||')[0] : '') "
+                        ": datum.value"
+                    ),
                 ),
             ),
             url=alt.value(data_uri),
@@ -181,33 +203,32 @@ def plot_pictograph(
         )
     )
  
-    # --- optional value-label layer ----------------------------------------
+    # --- optional value label -----------------------------------------------
     if value_label:
-        label_data = df[[cat_col, val_col]].copy()
-        label_data.columns = ["category", "value"]
+        # Place the label at the end of the last wrap-row for each category
+        label_data = (
+            data.sort_values(["category", "wrap_row", "col"])
+            .groupby("category", as_index=False)
+            .last()
+            [["category", "value", "col", "y_key"]]
+            .copy()
+        )
+        label_data["col"] = label_data["col"] + 1  # one step right of last icon
  
         label_layer = (
             alt.Chart(label_data)
             .mark_text(
-                align="left",
-                baseline="middle",
-                dx=8,
-                fontSize=label_font_size,
-                fontWeight="bold",
-                color="#555555",
+                align="left", baseline="middle",
+                dx=4, fontSize=label_font_size,
+                fontWeight="bold", color="#555555",
             )
             .encode(
                 x=alt.X(
-                    "value:Q",
-                    scale=alt.Scale(domain=[-0.5, max_val - 0.5]),
+                    "col:Q",
+                    scale=alt.Scale(domain=[-0.5, max_per_row - 0.5]),
                     axis=None,
                 ),
-                y=alt.Y(
-                    "category:N",
-                    sort=alt.EncodingSortField(
-                        field="value", op="max", order="descending"
-                    ),
-                ),
+                y=alt.Y("y_key:N", sort=y_order),
                 text=alt.Text("value:Q"),
             )
         )
@@ -246,8 +267,11 @@ chart = plot_pictograph(
     svg_path='apps/mbg/mbg.svg',
     icon_size=36,
     icon_spacing=4,
+    # value_label=False,
     title="Biaya dengan unit Hari MBG (1.2T/hari)",
-    value_label=True,
+    value_label=False,
 )
 
 st.altair_chart(chart)
+
+# source: https://id.wikipedia.org/wiki/Daftar_Proyek_Strategis_Nasional
