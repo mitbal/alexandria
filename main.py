@@ -1,5 +1,11 @@
 import streamlit as st
 
+st.set_page_config(
+    page_title='Home',
+    page_icon='📚',
+    layout='wide'
+)
+
 page_home = st.Page('home.py', title='Home', icon='📚')
 page_lesley = st.Page('apps/lesley/lesley.py', title='Lesley', icon='📅')
 page_floryn = st.Page('apps/floryn/floryn.py', title='Floryn', icon='🌼')

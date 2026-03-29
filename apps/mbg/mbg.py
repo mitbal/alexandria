@@ -1,12 +1,15 @@
 import math
+import base64
+from pathlib import Path
 
-import streamlit as st
-import altair as alt
 import pandas as pd
+import altair as alt
+import streamlit as st
+
 
 st.set_page_config(
     page_title='MBG Plot',
-    page_icon='',
+    page_icon='🍱',
     layout='wide'
 )
 
@@ -15,13 +18,6 @@ st.title('MBG Plot')
 df = pd.read_csv('apps/mbg/mbg.csv')
 
 st.data_editor(df, hide_index=True, num_rows='dynamic')
- 
-import base64
-import re
-from pathlib import Path
- 
-import altair as alt
-import pandas as pd
  
  
 # ---------------------------------------------------------------------------
@@ -255,19 +251,14 @@ def plot_pictograph(
     )
 
 
-sample_df = pd.DataFrame({
-    "Fruit":    ["Apples", "Bananas", "Cherries", "Dates", "Elderberry"],
-    "Quantity": [7, 4, 10, 2, 6],
-})
+temp_df = df[[df.columns[0]]]
+temp_df['value'] = (df[df.columns[1]] / 1.2).astype(int).to_list()
 
 chart = plot_pictograph(
-    # df=sample_df,
-    df=df,
-    # svg_path=tmp_svg,
+    df=temp_df,
     svg_path='apps/mbg/mbg.svg',
     icon_size=36,
     icon_spacing=4,
-    # value_label=False,
     title="Biaya dengan unit Hari MBG (1.2T/hari)",
     value_label=False,
 )
