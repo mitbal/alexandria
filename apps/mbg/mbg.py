@@ -15,7 +15,13 @@ st.set_page_config(
 
 st.title('MBG Plot')
 
-df = pd.read_csv('apps/mbg/mbg.csv')
+uploaded_file = st.file_uploader('Upload CSV file', type='csv')
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+else:
+    df = pd.read_csv('apps/mbg/mbg.csv')
+
+# df = pd.read_csv('apps/mbg/mbg.csv')
 
 st.data_editor(df, hide_index=True, num_rows='dynamic')
  
@@ -264,5 +270,3 @@ chart = plot_pictograph(
 )
 
 st.altair_chart(chart)
-
-# source: https://id.wikipedia.org/wiki/Daftar_Proyek_Strategis_Nasional
