@@ -5,6 +5,7 @@ WORKDIR /app
 COPY requirements.txt ./requirements.txt
 RUN pip3 install -r requirements.txt
 
+COPY panen_dividen.svg ./panen_dividen.svg
 COPY README.md ./README.md
 COPY main.py ./main.py
 COPY home.py ./home.py
