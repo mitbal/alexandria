@@ -18,5 +18,8 @@ This particular color scheme, instead of the default theme by map providers, mak
 ### 5. MBG Plot
 Plot any budget related data in comparison with days of MBG budget (1.2 Trillion Rupiah per day) and show it as pictograph of a food tray.
 
+### 6. Voronoi Treemap
+Create a voronoi treemap from a given dataframe to show the relative size of the data with hierarchical relationship.
+
 This collection is made with a huge amount of caffeine, so if you find any of these tools to be useful, consider treating me to a caramel macchiato to continue the development.
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/mitbal)
