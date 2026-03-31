@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 60" width="250" height="60">
+  <style>
+    .pd-btn { cursor: pointer; transition: all 0.3s ease; }
+    .pd-bg { fill: #ffffff; stroke: #E0E0E0; stroke-width: 2; transition: all 0.3s ease; }
+    .pd-btn:hover .pd-bg { stroke: #4CAF50; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .pd-btn:hover .pd-coin { transform: translateY(-2px); transition: all 0.3s ease; }
+  </style>
+
+  <g class="pd-btn">
+    <rect class="pd-bg" x="2" y="2" width="246" height="56" rx="28" />
+
+    <g transform="translate(8, 8)">
+      <circle cx="22" cy="22" r="22" fill="#E8F5E9" />
+      
+      <path d="M22,30 C14,30 12,20 16,14 C20,12 22,18 22,20 C22,18 24,12 28,14 C32,20 30,30 22,30 Z" fill="#4CAF50" />
+      <path d="M22,30 L22,36" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" />
+      
+      <g class="pd-coin" transform="translate(0, 0)">
+        <circle cx="32" cy="30" r="10" fill="#FFC107" stroke="#ffffff" stroke-width="2" />
+        <circle cx="32" cy="30" r="7" fill="none" stroke="#F57F17" stroke-width="1" opacity="0.6"/>
+        <text x="32" y="34" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#F57F17" text-anchor="middle">$</text>
+      </g>
+    </g>
+
+    <text x="68" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="-0.5">
+      <tspan fill="#2E7D32">Panen</tspan><tspan fill="#F57F17">Dividen</tspan>
+    </text>
+  </g>
+</svg>
