@@ -28,7 +28,7 @@ else:
 
 # df = pd.read_csv('apps/mbg/mbg.csv')
 
-st.data_editor(df, hide_index=True, num_rows='dynamic')
+edited_df = st.data_editor(df, hide_index=True, num_rows='dynamic')
  
  
 # ---------------------------------------------------------------------------
@@ -270,15 +270,21 @@ def plot_pictograph(
     )
 
 
-temp_df = df[[df.columns[0]]]
-temp_df['value'] = (df[df.columns[1]] / 1.2).astype(int).to_list()
+plot_title = st.text_input(
+    label='Plot title',
+    value='Biaya dengan unit Hari MBG (1.2T/hari)',
+    placeholder='Enter chart title…',
+)
+
+temp_df = edited_df[[edited_df.columns[0]]].copy()
+temp_df['value'] = (edited_df[edited_df.columns[1]] / 1.2).astype(int).to_list()
 
 chart = plot_pictograph(
     df=temp_df,
     svg_path='apps/mbg/mbg.svg',
     icon_size=36,
     icon_spacing=4,
-    title="Biaya dengan unit Hari MBG (1.2T/hari)",
+    title=plot_title,
     value_label=False,
 )
 
