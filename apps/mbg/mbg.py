@@ -1,5 +1,6 @@
 import math
 import base64
+import textwrap
 from pathlib import Path
 
 import pandas as pd
@@ -111,6 +112,7 @@ def plot_pictograph(
     background: str = "transparent",
     label_font_size: int = 13,
     value_label: bool = False,
+    label_wrap_width: int = 20,
 ) -> alt.Chart:
     """
     Build an isotype / pictograph Altair chart with row-wrapping support.
@@ -155,7 +157,12 @@ def plot_pictograph(
         raise ValueError("All values must be >= 0.")
  
     # --- expand data --------------------------------------------------------
-    data = _expand_to_icon_rows(df[[cat_col, val_col]], max_per_row)
+    # Pre-wrap long category names so Vega-Lite renders them as multi-line labels
+    wrapped_df = df[[cat_col, val_col]].copy()
+    wrapped_df[cat_col] = wrapped_df[cat_col].apply(
+        lambda s: textwrap.fill(str(s), width=label_wrap_width)
+    )
+    data = _expand_to_icon_rows(wrapped_df, max_per_row)
     data_uri = _svg_to_data_uri(svg_path)
  
     y_order = _build_y_sort_order(data)
@@ -192,6 +199,8 @@ def plot_pictograph(
                     domain=False,
                     grid=False,
                     labelPadding=8,
+                    labelLimit=180,
+                    labelLineHeight=label_font_size + 4,
                     # Show label only for the first wrap-row of each category
                     labelExpr=(
                         "indexof(datum.value, '||') >= 0 ? "
