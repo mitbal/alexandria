@@ -108,7 +108,7 @@ def plot_pictograph(
     icon_spacing: int = 2,
     max_per_row: int = 20,
     title: str = "Pictograph Chart",
-    background: str = "white",
+    background: str = "transparent",
     label_font_size: int = 13,
     value_label: bool = False,
 ) -> alt.Chart:
