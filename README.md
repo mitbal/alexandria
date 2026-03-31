@@ -15,5 +15,8 @@ More about S2ID and its differences compared to other algorithms such as geohash
 Monochromap is a library to plot on top of a black and white map, or what we in the industry call the Stamen Toner tile style. 
 This particular color scheme, instead of the default theme by map providers, makes it easier to highlight certain geographical features like points of interest.
 
+### 5. MBG Plot
+Plot any budget related data in comparison with days of MBG budget (1.2 Trillion Rupiah per day) and show it as pictograph of a food tray.
+
 This collection is made with a huge amount of caffeine, so if you find any of these tools to be useful, consider treating me to a caramel macchiato to continue the development.
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/mitbal)
