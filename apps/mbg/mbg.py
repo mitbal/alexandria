@@ -7,11 +7,15 @@ import altair as alt
 import streamlit as st
 
 
-st.set_page_config(
-    page_title='MBG Plot',
-    page_icon='🍱',
-    layout='wide'
+try:
+    st.set_page_config(
+        page_title='MBG Plot',
+        page_icon='🍱',
+        layout='wide'
 )
+except:
+    print('Config has been set before. Big whoops')
+
 
 st.title('MBG Plot')
 
