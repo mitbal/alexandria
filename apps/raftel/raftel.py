@@ -2,13 +2,7 @@ import os
 import raftel as rt
 import streamlit as st
 
-try:
-    st.set_page_config(
-        page_title='Raftel',
-        layout='wide'
-)
-except:
-    print('Config has been set before. Big whoops')
+
 
 st.title('Raftel')
 api_key = os.environ['STADIA_API_KEY']

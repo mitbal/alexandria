@@ -6,12 +6,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-try:
-    st.set_page_config(
-        layout='wide'
-    )
-except:
-    print('Config has been set before. Big whoops')
+
 
 st.title('Lesley')
 
@@ -20,8 +15,6 @@ if use_random == 'Use Random Data':
 
     cols = st.columns(2)
     year = cols[0].number_input('Select Year', min_value=1666, max_value=2600, value=2024, step=1)
-
-    time.sleep(0.5)
 
     dates = pd.date_range(start=f'{year}-01-01', end=f'{year}-12-31')
     values = np.random.randint(1, 10, size=len(dates))
