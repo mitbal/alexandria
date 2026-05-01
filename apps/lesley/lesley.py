@@ -45,7 +45,7 @@ heatmap_container = st.container(height=310)
 with heatmap_container:
     height=270
     chart_heatmap = lesley.cal_heatmap(dates, values, height=height, cmap=cmap)
-    st.altair_chart(chart_heatmap, use_container_width=False)
+    st.altair_chart(chart_heatmap, width='content')
 
 st.write('Individual Month Plot')
 month_container = st.container(height=400)
@@ -55,7 +55,7 @@ with month_container:
     show_date = cols[0].checkbox('Show Date', value=True)
     idx = list(calendar.month_name).index(month)
     month_plot = lesley.month_plot(dates, values, month=idx, width=450, cmap=cmap, show_date=show_date)
-    cols[1].altair_chart(month_plot, use_container_width=False)
+    cols[1].altair_chart(month_plot, width='content')
 
 st.write('Entire Year Plot')
 year_container = st.container(height=850)
