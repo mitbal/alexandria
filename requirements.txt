@@ -4,3 +4,4 @@ floryn>=0.0.1
 lesley>=0.2.1
 streamlit==1.55.0
 st-vortree>=0.1.7
+streamlit-analytics2

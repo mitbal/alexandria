@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit_analytics2 as streamlit_analytics
 
 st.set_page_config(
     page_title='Home',
@@ -34,7 +35,8 @@ def get_img_with_href(local_img_path, target_url):
     html_code = f'Visit Other Project:<br/><a href="{target_url}"><img src="data:image/{img_format};base64,{bin_str}" width="200"></a>'
     return html_code
 
-image_html = get_img_with_href('panen_dividen.svg', 'https://panendividen.com')
-st.sidebar.html(image_html)
+image_html = get_img_with_href('panen_dividen.svg', 'https://panendividen.com?utm_source=alexandria')
+st.sidebar.markdown(image_html, unsafe_allow_html=True)
 
-pages.run()
+with streamlit_analytics.track():
+    pages.run()
