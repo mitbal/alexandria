@@ -14,11 +14,13 @@ page_raftel = st.Page('apps/raftel/raftel.py', title='Raftel', icon='🟩')
 page_monoch = st.Page('apps/monochromap/monochromap.py', title='Monochromap', icon='🗺️')
 page_mbg = st.Page('apps/mbg/mbg.py', title='MBG Plot', icon='🍱')
 page_vortree = st.Page('apps/vortree/vortree.py', title='Voronoi Treemap', icon='🌀')
+page_reddit = st.Page('apps/reddit_stats/reddit_stats.py', title='Reddit Stats', icon='🤖')
 
 pages = st.navigation(
     {
         'Home': [page_home],
-        'Libraries': [page_lesley, page_floryn, page_raftel, page_monoch, page_mbg, page_vortree]
+        'Libraries': [page_lesley, page_floryn, page_raftel, page_monoch, page_mbg, page_vortree],
+        'Utilities': [page_reddit],
     }
 )
 
