@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import altair as alt
 import streamlit as st
@@ -92,10 +95,23 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-df = pd.read_csv('subreddit_stats.csv')
+def _find_csv(name: str = 'subreddit_stats.csv') -> Path:
+    start = Path(__file__).resolve().parent
+    for parent in [start, *start.parents]:
+        candidate = parent / name
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(f"Could not find {name} starting from {start}")
+
+
+df = pd.read_csv(_find_csv())
 df = df[df['status'] == 'ok'].copy()
 df = df.dropna(subset=['subscribers'])
 df['subscribers'] = df['subscribers'].astype(int)
+df['created_utc'] = pd.to_datetime(df['created_utc'], errors='coerce', utc=True)
+df = df.dropna(subset=['created_utc']).copy()
+now_utc = pd.Timestamp.now(tz='UTC')
+df['age_years'] = (now_utc - df['created_utc']).dt.total_seconds() / (365.25 * 24 * 60 * 60)
 df = df.sort_values('subscribers', ascending=False).reset_index(drop=True)
 
 total_subs = df['subscribers'].sum()
@@ -108,6 +124,13 @@ min_subs_val = df['subscribers'].min()
 q1 = df['subscribers'].quantile(0.25)
 q3 = df['subscribers'].quantile(0.75)
 top_sub = df.iloc[0]['subreddit']
+
+mean_age = df['age_years'].mean()
+median_age = df['age_years'].median()
+oldest_sub = df.loc[df['age_years'].idxmax(), 'subreddit']
+oldest_age = df['age_years'].max()
+newest_sub = df.loc[df['age_years'].idxmin(), 'subreddit']
+newest_age = df['age_years'].min()
 
 c1, c2, c3, c4 = st.columns(4)
 c1.markdown(
@@ -167,10 +190,131 @@ st.altair_chart(hist_chart, use_container_width=True)
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
+st.markdown('<div class="section-label">Age</div>', unsafe_allow_html=True)
+
+age_cols = st.columns(5)
+age_cols[0].markdown(f'<div class="kpi-card"><div class="kpi-label">Mean Age</div><div class="kpi-value" style="font-size:1.3rem">{mean_age:.1f} yrs</div></div>', unsafe_allow_html=True)
+age_cols[1].markdown(f'<div class="kpi-card"><div class="kpi-label">Median Age</div><div class="kpi-value" style="font-size:1.3rem">{median_age:.1f} yrs</div></div>', unsafe_allow_html=True)
+age_cols[2].markdown(f'<div class="kpi-card"><div class="kpi-label">Oldest</div><div class="kpi-value" style="font-size:1.3rem">{oldest_age:.1f} yrs</div><div class="kpi-label" style="margin-top:4px">r/{oldest_sub}</div></div>', unsafe_allow_html=True)
+age_cols[3].markdown(f'<div class="kpi-card"><div class="kpi-label">Newest</div><div class="kpi-value" style="font-size:1.3rem">{newest_age:.1f} yrs</div><div class="kpi-label" style="margin-top:4px">r/{newest_sub}</div></div>', unsafe_allow_html=True)
+age_cols[4].markdown(f'<div class="kpi-card"><div class="kpi-label">Correlation</div><div class="kpi-value" style="font-size:1.3rem">{df["subscribers"].corr(df["age_years"]):.2f}</div><div class="kpi-label" style="margin-top:4px">subs vs age</div></div>', unsafe_allow_html=True)
+
+age_hist = (
+    alt.Chart(df)
+    .mark_bar(cornerRadiusEnd=2)
+    .encode(
+        x=alt.X('age_years:Q', bin=alt.Bin(maxbins=25), title='Age (years)'),
+        y=alt.Y('count()', title='Number of Subreddits'),
+        color=alt.value(PALETTE['secondary']),
+        tooltip=[alt.Tooltip('age_years:Q', bin=True, title='Age range'), alt.Tooltip('count()', title='Count')],
+    )
+    .properties(height=250)
+)
+st.altair_chart(age_hist, use_container_width=True)
+
+st.markdown('<hr class="rule" />', unsafe_allow_html=True)
+
 with st.sidebar:
     st.markdown('### Configuration')
     top_n = st.slider('Top N subreddits', 10, min(100, n_subreddits), 50, key='reddit_top_n')
     min_subs = st.number_input('Minimum subscribers', 0, int(df['subscribers'].max()), 0, key='reddit_min')
+    show_scatter_labels = st.checkbox('Show labels on scatter plot', value=False, key='reddit_show_labels')
+    n_scatter_labels = st.slider('Label top N points', 1, 50, 10, key='reddit_n_labels', disabled=not show_scatter_labels)
+
+st.markdown('<div class="section-label">Subscribers vs Age</div>', unsafe_allow_html=True)
+
+scatter_df = df[['subreddit', 'subscribers', 'age_years', 'created_utc']].copy()
+scatter_df['created_date'] = scatter_df['created_utc'].dt.strftime('%Y-%m-%d')
+scatter_df['log_subscribers'] = np.log10(scatter_df['subscribers'].replace(0, np.nan))
+
+x_min = scatter_df['age_years'].min()
+x_max = scatter_df['age_years'].max()
+y_min = scatter_df['log_subscribers'].min()
+y_max = scatter_df['log_subscribers'].max()
+x_pad = (x_max - x_min) * 0.12 if x_max > x_min else 1
+y_pad = (y_max - y_min) * 0.08 if y_max > y_min else 0.5
+
+x_domain = [x_min - x_pad * 0.1, x_max + x_pad]
+y_domain = [y_min - y_pad * 0.1, y_max + y_pad]
+
+
+def _x_scale():
+    return alt.Scale(domain=x_domain, zero=False)
+
+
+def _y_scale():
+    return alt.Scale(domain=y_domain, zero=False)
+
+
+scatter = (
+    alt.Chart(scatter_df)
+    .mark_circle(size=80, opacity=0.7)
+    .encode(
+        x=alt.X(
+            'age_years:Q',
+            title='Age (years)',
+            scale=_x_scale(),
+        ),
+        y=alt.Y(
+            'log_subscribers:Q',
+            title='Subscribers (log10 scale)',
+            scale=_y_scale(),
+            axis=alt.Axis(
+                values=[0, 1, 2, 3, 4, 5, 6],
+                labelExpr="format(pow(10, datum.value), '.0s')",
+            ),
+        ),
+        color=alt.value(PALETTE['primary']),
+        tooltip=[
+            alt.Tooltip('subreddit:N', title='Subreddit'),
+            alt.Tooltip('subscribers:Q', format=',', title='Subscribers'),
+            alt.Tooltip('age_years:Q', format='.1f', title='Age (years)'),
+            alt.Tooltip('created_date:N', title='Created'),
+        ],
+    )
+    .properties(height=420)
+)
+
+scatter_trend = (
+    alt.Chart(scatter_df)
+    .transform_regression('age_years', 'log_subscribers')
+    .mark_line(color=PALETTE['ink'], opacity=0.4, strokeDash=[4, 4])
+    .encode(x='age_years:Q', y='log_subscribers:Q')
+)
+
+scatter_layers = [scatter, scatter_trend]
+if show_scatter_labels:
+    label_df = scatter_df.nlargest(n_scatter_labels, 'subscribers')
+    scatter_labels = (
+        alt.Chart(label_df)
+        .mark_text(
+            align='left',
+            baseline='middle',
+            dx=10,
+            dy=-8,
+            fontSize=11,
+            fontWeight=600,
+            color=PALETTE['ink'],
+            stroke='white',
+            strokeWidth=3,
+        )
+        .encode(
+            x=alt.X('age_years:Q', scale=_x_scale()),
+            y=alt.Y('log_subscribers:Q', scale=_y_scale(), axis=None),
+            text='subreddit:N',
+        )
+    )
+    scatter_layers.append(scatter_labels)
+
+scatter_chart = (
+    alt.layer(*scatter_layers)
+    .properties(height=420)
+    .interactive()
+    .configure_view(clip=False)
+)
+st.altair_chart(scatter_chart, use_container_width=True)
+
+st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
 plot_df = df[df['subscribers'] >= min_subs].head(top_n).copy()
 plot_df = plot_df.sort_values('subscribers', ascending=False)
@@ -220,8 +364,17 @@ st.altair_chart(bar_chart + bar_labels, use_container_width=True)
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
 st.markdown('<div class="section-label">Detail Table</div>', unsafe_allow_html=True)
+display_df = df[['subreddit', 'subscribers', 'age_years', 'created_utc']].copy()
+display_df['created_date'] = display_df['created_utc'].dt.strftime('%Y-%m-%d')
 st.dataframe(
-    df[['subreddit', 'subscribers']].rename(columns={'subreddit': 'Subreddit', 'subscribers': 'Subscribers'}),
+    display_df[['subreddit', 'subscribers', 'age_years', 'created_date']].rename(
+        columns={
+            'subreddit': 'Subreddit',
+            'subscribers': 'Subscribers',
+            'age_years': 'Age (years)',
+            'created_date': 'Created',
+        }
+    ),
     use_container_width=True,
     hide_index=True,
 )
