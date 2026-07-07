@@ -175,14 +175,23 @@ stat_cols[3].markdown(f'<div class="kpi-card"><div class="kpi-label">Q1 (25%)</d
 stat_cols[4].markdown(f'<div class="kpi-card"><div class="kpi-label">Q3 (75%)</div><div class="kpi-value" style="font-size:1.3rem">{q3:,.0f}</div></div>', unsafe_allow_html=True)
 stat_cols[5].markdown(f'<div class="kpi-card"><div class="kpi-label">Max</div><div class="kpi-value" style="font-size:1.3rem">{max_subs:,}</div></div>', unsafe_allow_html=True)
 
+log_subs = np.log10(df['subscribers'].replace(0, np.nan)).dropna()
 hist_chart = (
-    alt.Chart(df)
+    alt.Chart(log_subs.to_frame('log_subscribers'))
     .mark_bar(cornerRadiusEnd=2)
     .encode(
-        x=alt.X('subscribers:Q', bin=alt.Bin(maxbins=30), title='Subscribers'),
+        x=alt.X(
+            'log_subscribers:Q',
+            bin=alt.Bin(maxbins=60),
+            title='Subscribers (log10 scale)',
+            axis=alt.Axis(
+                values=list(range(int(np.floor(log_subs.min())), int(np.ceil(log_subs.max())) + 1)),
+                labelExpr="format(pow(10, datum.value), '.0s')",
+            ),
+        ),
         y=alt.Y('count()', title='Number of Subreddits'),
         color=alt.value(PALETTE['secondary']),
-        tooltip=[alt.Tooltip('subscribers:Q', bin=True, title='Range'), alt.Tooltip('count()', title='Count')],
+        tooltip=[alt.Tooltip('log_subscribers:Q', bin=True, title='Subscribers range'), alt.Tooltip('count()', title='Count')],
     )
     .properties(height=250)
 )
