@@ -176,22 +176,55 @@ stat_cols[4].markdown(f'<div class="kpi-card"><div class="kpi-label">Q3 (75%)</d
 stat_cols[5].markdown(f'<div class="kpi-card"><div class="kpi-label">Max</div><div class="kpi-value" style="font-size:1.3rem">{max_subs:,}</div></div>', unsafe_allow_html=True)
 
 log_subs = np.log10(df['subscribers'].replace(0, np.nan)).dropna()
+log_lo = float(np.floor(log_subs.min()))
+log_hi = float(np.ceil(log_subs.max()))
+bin_max = max(2, min(60, int(np.ceil((log_hi - log_lo) * 4)) + 1))
+log_edges = list(np.linspace(log_lo, log_hi, bin_max + 1))
+
+
+def _fmt_si(n: float) -> str:
+    n = float(n)
+    sign = '-' if n < 0 else ''
+    n = abs(n)
+    for threshold, suffix in [(1e9, 'B'), (1e6, 'M'), (1e3, 'K')]:
+        if n >= threshold:
+            value = n / threshold
+            return f'{sign}{value:.0f}{suffix}' if value >= 10 else f'{sign}{value:.1f}{suffix}'
+    return f'{sign}{n:.0f}'
+
+
+edge_labels = [_fmt_si(10 ** e) for e in log_edges]
+
+bin_idx = np.clip(np.digitize(log_subs, log_edges) - 1, 0, bin_max - 1)
+all_ranges = [f'{edge_labels[i]} – {edge_labels[i + 1]}' for i in range(bin_max)]
+ranges = [all_ranges[i] for i in bin_idx]
+hist_summary = (
+    pd.DataFrame({'range': ranges})
+    .groupby('range', as_index=False)
+    .size()
+    .rename(columns={'size': 'count'})
+)
+present = set(hist_summary['range'])
+ordered = [r for r in all_ranges if r in present]
+hist_summary['range'] = pd.Categorical(hist_summary['range'], categories=ordered, ordered=True)
+hist_summary = hist_summary.sort_values('range').reset_index(drop=True)
+
 hist_chart = (
-    alt.Chart(log_subs.to_frame('log_subscribers'))
+    alt.Chart(hist_summary)
     .mark_bar(cornerRadiusEnd=2)
     .encode(
         x=alt.X(
-            'log_subscribers:Q',
-            bin=alt.Bin(maxbins=60),
+            'range:N',
             title='Subscribers (log10 scale)',
-            axis=alt.Axis(
-                values=list(range(int(np.floor(log_subs.min())), int(np.ceil(log_subs.max())) + 1)),
-                labelExpr="format(pow(10, datum.value), '.0s')",
-            ),
+            sort=ordered,
+            axis=alt.Axis(labelAngle=0, labelFontSize=10),
         ),
-        y=alt.Y('count()', title='Number of Subreddits'),
+        y=alt.Y('count:Q', title='Number of Subreddits'),
         color=alt.value(PALETTE['secondary']),
-        tooltip=[alt.Tooltip('log_subscribers:Q', bin=True, title='Subscribers range'), alt.Tooltip('count()', title='Count')],
+        tooltip=[
+            alt.Tooltip('range:N', title='Subscribers range'),
+            alt.Tooltip('count:Q', title='Count'),
+        ],
     )
     .properties(height=250)
 )
