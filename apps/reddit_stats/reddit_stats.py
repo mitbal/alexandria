@@ -219,7 +219,11 @@ with st.sidebar:
     top_n = st.slider('Top N subreddits', 10, min(100, n_subreddits), 50, key='reddit_top_n')
     min_subs = st.number_input('Minimum subscribers', 0, int(df['subscribers'].max()), 0, key='reddit_min')
     show_scatter_labels = st.checkbox('Show labels on scatter plot', value=False, key='reddit_show_labels')
-    n_scatter_labels = st.slider('Label top N points', 1, 50, 10, key='reddit_n_labels', disabled=not show_scatter_labels)
+    label_all_points = st.checkbox('Label all points', value=False, key='reddit_label_all', disabled=not show_scatter_labels)
+    n_scatter_labels = st.slider(
+        'Number of labels (spread across plot)', 1, n_subreddits, min(10, n_subreddits),
+        key='reddit_n_labels', disabled=not show_scatter_labels or label_all_points,
+    )
 
 st.markdown('<div class="section-label">Subscribers vs Age</div>', unsafe_allow_html=True)
 
@@ -283,20 +287,41 @@ scatter_trend = (
 )
 
 scatter_layers = [scatter, scatter_trend]
+def _select_spread_labels(data, n_labels, x_col='age_years', y_col='log_subscribers', value_col='subscribers'):
+    """Pick up to n_labels points spread across the x/y plane instead of just
+    the top-N by value. Buckets points into a coarse grid over (x_col, y_col)
+    and keeps the highest-value point per occupied cell, so labels land across
+    the whole scatter rather than clustering at the top (highest-subscriber) end."""
+    if n_labels <= 0 or data.empty:
+        return data.iloc[0:0]
+    n_labels = min(n_labels, len(data))
+    grid_size = max(1, int(np.ceil(np.sqrt(n_labels))))
+    x_bins = pd.cut(data[x_col], bins=grid_size, labels=False, include_lowest=True)
+    y_bins = pd.cut(data[y_col], bins=grid_size, labels=False, include_lowest=True)
+    tmp = data.copy()
+    tmp['_cell'] = list(zip(x_bins, y_bins))
+    picked = tmp.loc[tmp.groupby('_cell')[value_col].idxmax()]
+    if len(picked) > n_labels:
+        picked = picked.nlargest(n_labels, value_col)
+    return picked.drop(columns='_cell')
+
+
 if show_scatter_labels:
-    label_df = scatter_df.nlargest(n_scatter_labels, 'subscribers')
+    label_df = scatter_df if label_all_points else _select_spread_labels(scatter_df, n_scatter_labels)
     scatter_labels = (
         alt.Chart(label_df)
         .mark_text(
             align='left',
             baseline='middle',
             dx=10,
-            dy=-8,
+            dy=-10,
             fontSize=11,
             fontWeight=600,
             color=PALETTE['ink'],
             stroke='white',
-            strokeWidth=3,
+            strokeWidth=0.1,
+            strokeJoin='round',
+            clip=False,
         )
         .encode(
             x=alt.X('age_years:Q', scale=_x_scale()),
