@@ -266,19 +266,82 @@ with st.sidebar:
         'Number of labels (spread across plot)', 1, n_subreddits, min(10, n_subreddits),
         key='reddit_n_labels', disabled=not show_scatter_labels or label_all_points,
     )
+    top_n_age = st.slider('Top N subreddits by age', 5, min(50, n_subreddits), 20, key='reddit_top_n_age')
 
-st.markdown('<div class="section-label">Subscribers vs Age</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-label">Growth Rate</div>', unsafe_allow_html=True)
+
+df['growth_rate'] = np.where(df['age_years'] > 0, df['subscribers'] / df['age_years'], np.nan)
+mean_growth = df['growth_rate'].mean()
+median_growth = df['growth_rate'].median()
+fastest_idx = df['growth_rate'].idxmax()
+fastest_sub = df.loc[fastest_idx, 'subreddit']
+fastest_rate = df.loc[fastest_idx, 'growth_rate']
+
+growth_cols = st.columns(4)
+growth_cols[0].markdown(f'<div class="kpi-card"><div class="kpi-label">Mean Growth</div><div class="kpi-value" style="font-size:1.3rem">{mean_growth:,.0f}</div><div class="kpi-label" style="margin-top:4px">subs / year</div></div>', unsafe_allow_html=True)
+growth_cols[1].markdown(f'<div class="kpi-card"><div class="kpi-label">Median Growth</div><div class="kpi-value" style="font-size:1.3rem">{median_growth:,.0f}</div><div class="kpi-label" style="margin-top:4px">subs / year</div></div>', unsafe_allow_html=True)
+growth_cols[2].markdown(f'<div class="kpi-card"><div class="kpi-label">Fastest</div><div class="kpi-value" style="font-size:1.3rem">{fastest_rate:,.0f}</div><div class="kpi-label" style="margin-top:4px">subs / year</div></div>', unsafe_allow_html=True)
+growth_cols[3].markdown(f'<div class="kpi-card"><div class="kpi-label">Fastest Subreddit</div><div class="kpi-value" style="font-size:1.3rem">r/{fastest_sub}</div></div>', unsafe_allow_html=True)
+
+growth_df = df[df['subscribers'] >= min_subs].nlargest(top_n, 'growth_rate').copy()
+growth_df = growth_df.sort_values('growth_rate', ascending=False).reset_index(drop=True)
+
+growth_chart = (
+    alt.Chart(growth_df)
+    .mark_bar(cornerRadiusEnd=4)
+    .encode(
+        x=alt.X(
+            'growth_rate:Q',
+            title='Subscribers per Year',
+            axis=alt.Axis(format='~s', grid=True),
+        ),
+        y=alt.Y(
+            'subreddit:N',
+            sort=None,
+            title=None,
+            axis=alt.Axis(labelLimit=200, labelFontSize=12),
+        ),
+        color=alt.condition(
+            alt.datum.growth_rate == growth_df['growth_rate'].max(),
+            alt.value(PALETTE['primary']),
+            alt.value(PALETTE['secondary']),
+        ),
+        tooltip=[
+            alt.Tooltip('subreddit:N', title='Subreddit'),
+            alt.Tooltip('growth_rate:Q', format=',.0f', title='Subs / Year'),
+            alt.Tooltip('subscribers:Q', format=',', title='Subscribers'),
+            alt.Tooltip('age_years:Q', format='.1f', title='Age (years)'),
+        ],
+    )
+    .properties(height=max(300, 28 * len(growth_df)))
+)
+
+growth_labels = (
+    alt.Chart(growth_df)
+    .mark_text(align='left', dx=6, fontSize=11, fontWeight=600, color=PALETTE['ink'])
+    .encode(
+        x=alt.X('growth_rate:Q'),
+        y=alt.Y('subreddit:N', sort=None),
+        text=alt.Text('growth_rate:Q', format='.0f'),
+    )
+)
+
+st.altair_chart(growth_chart + growth_labels, use_container_width=True)
+
+st.markdown('<hr class="rule" />', unsafe_allow_html=True)
+
+st.markdown('<div class="section-label">Age vs Subscribers</div>', unsafe_allow_html=True)
 
 scatter_df = df[['subreddit', 'subscribers', 'age_years', 'created_utc']].copy()
 scatter_df['created_date'] = scatter_df['created_utc'].dt.strftime('%Y-%m-%d')
 scatter_df['log_subscribers'] = np.log10(scatter_df['subscribers'].replace(0, np.nan))
 
-x_min = scatter_df['age_years'].min()
-x_max = scatter_df['age_years'].max()
-y_min = scatter_df['log_subscribers'].min()
-y_max = scatter_df['log_subscribers'].max()
-x_pad = (x_max - x_min) * 0.12 if x_max > x_min else 1
-y_pad = (y_max - y_min) * 0.08 if y_max > y_min else 0.5
+x_min = scatter_df['log_subscribers'].min()
+x_max = scatter_df['log_subscribers'].max()
+y_min = scatter_df['age_years'].min()
+y_max = scatter_df['age_years'].max()
+x_pad = (x_max - x_min) * 0.08 if x_max > x_min else 0.5
+y_pad = (y_max - y_min) * 0.12 if y_max > y_min else 1
 
 x_domain = [x_min - x_pad * 0.1, x_max + x_pad]
 y_domain = [y_min - y_pad * 0.1, y_max + y_pad]
@@ -297,18 +360,18 @@ scatter = (
     .mark_circle(size=80, opacity=0.7)
     .encode(
         x=alt.X(
-            'age_years:Q',
-            title='Age (years)',
-            scale=_x_scale(),
-        ),
-        y=alt.Y(
             'log_subscribers:Q',
             title='Subscribers (log10 scale)',
-            scale=_y_scale(),
+            scale=_x_scale(),
             axis=alt.Axis(
                 values=[0, 1, 2, 3, 4, 5, 6],
                 labelExpr="format(pow(10, datum.value), '.0s')",
             ),
+        ),
+        y=alt.Y(
+            'age_years:Q',
+            title='Age (years)',
+            scale=_y_scale(),
         ),
         color=alt.value(PALETTE['primary']),
         tooltip=[
@@ -323,13 +386,13 @@ scatter = (
 
 scatter_trend = (
     alt.Chart(scatter_df)
-    .transform_regression('age_years', 'log_subscribers')
+    .transform_regression('log_subscribers', 'age_years')
     .mark_line(color=PALETTE['ink'], opacity=0.4, strokeDash=[4, 4])
-    .encode(x='age_years:Q', y='log_subscribers:Q')
+    .encode(x='log_subscribers:Q', y='age_years:Q')
 )
 
 scatter_layers = [scatter, scatter_trend]
-def _select_spread_labels(data, n_labels, x_col='age_years', y_col='log_subscribers', value_col='subscribers'):
+def _select_spread_labels(data, n_labels, x_col='log_subscribers', y_col='age_years', value_col='subscribers'):
     """Pick up to n_labels points spread across the x/y plane instead of just
     the top-N by value. Buckets points into a coarse grid over (x_col, y_col)
     and keeps the highest-value point per occupied cell, so labels land across
@@ -366,8 +429,8 @@ if show_scatter_labels:
             clip=False,
         )
         .encode(
-            x=alt.X('age_years:Q', scale=_x_scale()),
-            y=alt.Y('log_subscribers:Q', scale=_y_scale(), axis=None),
+            x=alt.X('log_subscribers:Q', scale=_x_scale()),
+            y=alt.Y('age_years:Q', scale=_y_scale()),
             text='subreddit:N',
         )
     )
@@ -430,15 +493,50 @@ st.altair_chart(bar_chart + bar_labels, use_container_width=True)
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
+st.markdown('<div class="section-label">Age by Subreddit</div>', unsafe_allow_html=True)
+
+age_bar_df = df[df['subscribers'] >= min_subs].nlargest(top_n_age, 'age_years').copy()
+age_bar_df = age_bar_df.sort_values('age_years', ascending=False).reset_index(drop=True)
+
+age_bar_chart = (
+    alt.Chart(age_bar_df)
+    .mark_bar(cornerRadiusEnd=2)
+    .encode(
+        x=alt.X(
+            'subreddit:N',
+            sort='-y',
+            title=None,
+            axis=alt.Axis(labelAngle=45, labelFontSize=10, labelLimit=120),
+        ),
+        y=alt.Y('age_years:Q', title='Age (years)', axis=alt.Axis(format='.1f')),
+        color=alt.condition(
+            alt.datum.age_years == age_bar_df['age_years'].max(),
+            alt.value(PALETTE['primary']),
+            alt.value(PALETTE['secondary']),
+        ),
+        tooltip=[
+            alt.Tooltip('subreddit:N', title='Subreddit'),
+            alt.Tooltip('age_years:Q', format='.1f', title='Age (years)'),
+            alt.Tooltip('subscribers:Q', format=',', title='Subscribers'),
+        ],
+    )
+    .properties(height=300)
+)
+
+st.altair_chart(age_bar_chart, use_container_width=True)
+
+st.markdown('<hr class="rule" />', unsafe_allow_html=True)
+
 st.markdown('<div class="section-label">Detail Table</div>', unsafe_allow_html=True)
-display_df = df[['subreddit', 'subscribers', 'age_years', 'created_utc']].copy()
+display_df = df[['subreddit', 'subscribers', 'age_years', 'growth_rate', 'created_utc']].copy()
 display_df['created_date'] = display_df['created_utc'].dt.strftime('%Y-%m-%d')
 st.dataframe(
-    display_df[['subreddit', 'subscribers', 'age_years', 'created_date']].rename(
+    display_df[['subreddit', 'subscribers', 'age_years', 'growth_rate', 'created_date']].rename(
         columns={
             'subreddit': 'Subreddit',
             'subscribers': 'Subscribers',
             'age_years': 'Age (years)',
+            'growth_rate': 'Growth Rate (subs/year)',
             'created_date': 'Created',
         }
     ),
