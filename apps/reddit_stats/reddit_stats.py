@@ -14,9 +14,9 @@ PALETTE = {
     'bg_card': '#F7F5F0',
 }
 
-alt.themes.register(
-    'reddit',
-    lambda: {
+@alt.theme.register('reddit', enable=True)
+def reddit_theme():
+    return alt.theme.ThemeConfig({
         'config': {
             'background': 'transparent',
             'view': {'stroke': None},
@@ -53,9 +53,7 @@ alt.themes.register(
             },
             'bar': {'cornerRadiusEnd': 3},
         }
-    },
-)
-alt.themes.enable('reddit')
+    })
 
 st.set_page_config(page_title='Reddit Stats', layout='wide')
 
@@ -228,7 +226,7 @@ hist_chart = (
     )
     .properties(height=250)
 )
-st.altair_chart(hist_chart, use_container_width=True)
+st.altair_chart(hist_chart, width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
@@ -252,7 +250,7 @@ age_hist = (
     )
     .properties(height=250)
 )
-st.altair_chart(age_hist, use_container_width=True)
+st.altair_chart(age_hist, width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
@@ -285,6 +283,9 @@ growth_cols[3].markdown(f'<div class="kpi-card"><div class="kpi-label">Fastest S
 
 growth_df = df[df['subscribers'] >= min_subs].nlargest(top_n, 'growth_rate').copy()
 growth_df = growth_df.sort_values('growth_rate', ascending=False).reset_index(drop=True)
+growth_df['_highlight'] = np.where(
+    growth_df['growth_rate'].eq(growth_df['growth_rate'].max()), 'Highest', 'Other'
+)
 
 growth_chart = (
     alt.Chart(growth_df)
@@ -301,10 +302,13 @@ growth_chart = (
             title=None,
             axis=alt.Axis(labelLimit=200, labelFontSize=12),
         ),
-        color=alt.condition(
-            alt.datum.growth_rate == growth_df['growth_rate'].max(),
-            alt.value(PALETTE['primary']),
-            alt.value(PALETTE['secondary']),
+        color=alt.Color(
+            '_highlight:N',
+            legend=None,
+            scale=alt.Scale(
+                domain=['Other', 'Highest'],
+                range=[PALETTE['secondary'], PALETTE['primary']],
+            ),
         ),
         tooltip=[
             alt.Tooltip('subreddit:N', title='Subreddit'),
@@ -326,7 +330,7 @@ growth_labels = (
     )
 )
 
-st.altair_chart(growth_chart + growth_labels, use_container_width=True)
+st.altair_chart(growth_chart + growth_labels, width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
@@ -442,12 +446,15 @@ scatter_chart = (
     .interactive()
     .configure_view(clip=False)
 )
-st.altair_chart(scatter_chart, use_container_width=True)
+st.altair_chart(scatter_chart, width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
 plot_df = df[df['subscribers'] >= min_subs].head(top_n).copy()
 plot_df = plot_df.sort_values('subscribers', ascending=False)
+plot_df['_highlight'] = np.where(
+    plot_df['subscribers'].eq(plot_df['subscribers'].max()), 'Largest', 'Other'
+)
 
 st.markdown('<div class="section-label">Subscribers by Subreddit</div>', unsafe_allow_html=True)
 
@@ -466,10 +473,13 @@ bar_chart = (
             title=None,
             axis=alt.Axis(labelLimit=200, labelFontSize=12),
         ),
-        color=alt.condition(
-            alt.datum.subscribers == plot_df['subscribers'].max(),
-            alt.value(PALETTE['primary']),
-            alt.value(PALETTE['secondary']),
+        color=alt.Color(
+            '_highlight:N',
+            legend=None,
+            scale=alt.Scale(
+                domain=['Other', 'Largest'],
+                range=[PALETTE['secondary'], PALETTE['primary']],
+            ),
         ),
         tooltip=[
             alt.Tooltip('subreddit:N', title='Subreddit'),
@@ -489,7 +499,7 @@ bar_labels = (
     )
 )
 
-st.altair_chart(bar_chart + bar_labels, use_container_width=True)
+st.altair_chart(bar_chart + bar_labels, width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
@@ -497,6 +507,9 @@ st.markdown('<div class="section-label">Age by Subreddit</div>', unsafe_allow_ht
 
 age_bar_df = df[df['subscribers'] >= min_subs].nlargest(top_n_age, 'age_years').copy()
 age_bar_df = age_bar_df.sort_values('age_years', ascending=False).reset_index(drop=True)
+age_bar_df['_highlight'] = np.where(
+    age_bar_df['age_years'].eq(age_bar_df['age_years'].max()), 'Oldest', 'Other'
+)
 
 age_bar_chart = (
     alt.Chart(age_bar_df)
@@ -509,10 +522,13 @@ age_bar_chart = (
             axis=alt.Axis(labelAngle=45, labelFontSize=10, labelLimit=120),
         ),
         y=alt.Y('age_years:Q', title='Age (years)', axis=alt.Axis(format='.1f')),
-        color=alt.condition(
-            alt.datum.age_years == age_bar_df['age_years'].max(),
-            alt.value(PALETTE['primary']),
-            alt.value(PALETTE['secondary']),
+        color=alt.Color(
+            '_highlight:N',
+            legend=None,
+            scale=alt.Scale(
+                domain=['Other', 'Oldest'],
+                range=[PALETTE['secondary'], PALETTE['primary']],
+            ),
         ),
         tooltip=[
             alt.Tooltip('subreddit:N', title='Subreddit'),
@@ -523,7 +539,7 @@ age_bar_chart = (
     .properties(height=300)
 )
 
-st.altair_chart(age_bar_chart, use_container_width=True)
+st.altair_chart(age_bar_chart, width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
@@ -540,6 +556,6 @@ st.dataframe(
             'created_date': 'Created',
         }
     ),
-    use_container_width=True,
+    width='stretch',
     hide_index=True,
 )

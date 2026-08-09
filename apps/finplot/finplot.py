@@ -137,9 +137,9 @@ with st.sidebar:
 PALETTE = THEMES[_theme_name]['palette']
 FIN_COLORS = THEMES[_theme_name]['fin_colors']
 
-alt.themes.register(
-    'financial',
-    lambda: {
+@alt.theme.register('financial', enable=True)
+def financial_theme():
+    return alt.theme.ThemeConfig({
         'config': {
             'background': 'transparent',
             'view': {'stroke': None},
@@ -176,9 +176,7 @@ alt.themes.register(
             },
             'bar': {'cornerRadiusEnd': 3},
         }
-    },
-)
-alt.themes.enable('financial')
+    })
 
 _CSS_TEMPLATE = """
 <style>
@@ -269,7 +267,7 @@ if st.session_state.get('finplot_source_key') != source_key:
 with st.expander('Data Editor', expanded=False):
     edited_df = st.data_editor(
         st.session_state['finplot_df'],
-        use_container_width=True,
+        width='stretch',
         num_rows='dynamic',
         key='finplot_editor',
     )
@@ -595,7 +593,7 @@ bar_labels = (
     )
 )
 
-st.altair_chart(bar_chart + bar_labels, use_container_width=True)
+st.altair_chart(bar_chart + bar_labels, width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
@@ -645,7 +643,7 @@ if len(abs_cols) >= 3:
         .properties(height=340)
     )
 
-    st.altair_chart(stack_chart, use_container_width=True)
+    st.altair_chart(stack_chart, width='stretch')
     st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
 # --------------------------------------------------------------------------- #
@@ -695,7 +693,7 @@ if PCT_PRIMARY and len(pct_cols) >= 2:
         .properties(height=320)
     )
 
-    st.altair_chart(pct_chart, use_container_width=True)
+    st.altair_chart(pct_chart, width='stretch')
     st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
 # --------------------------------------------------------------------------- #
@@ -802,7 +800,7 @@ if GROWTH_COL:
         ),
     )
 
-    st.altair_chart(growth_chart, use_container_width=True)
+    st.altair_chart(growth_chart, width='stretch')
     st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
 # --------------------------------------------------------------------------- #
@@ -894,7 +892,7 @@ if PERIOD_PREV and PERIOD_CURR:
         ),
     )
 
-    st.altair_chart(period_chart, use_container_width=True)
+    st.altair_chart(period_chart, width='stretch')
     st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
 # --------------------------------------------------------------------------- #
@@ -947,11 +945,11 @@ if PERIOD_PREV and PERIOD_CURR:
     )
     _dc = st.columns(2)
     with _dc[0]:
-        st.altair_chart(_donut(PERIOD_PREV, str(PERIOD_PREV)), use_container_width=True)
+        st.altair_chart(_donut(PERIOD_PREV, str(PERIOD_PREV)), width='stretch')
     with _dc[1]:
-        st.altair_chart(_donut(PERIOD_CURR, str(PERIOD_CURR)), use_container_width=True)
+        st.altair_chart(_donut(PERIOD_CURR, str(PERIOD_CURR)), width='stretch')
 else:
-    st.altair_chart(_donut(PRIMARY_COL, f'Total {PRIMARY_COL}'), use_container_width=True)
+    st.altair_chart(_donut(PRIMARY_COL, f'Total {PRIMARY_COL}'), width='stretch')
 
 st.markdown('<hr class="rule" />', unsafe_allow_html=True)
 
@@ -966,4 +964,4 @@ for col in abs_cols:
 for col in pct_cols:
     display_df[col] = display_df[col].apply(lambda x: f'{x:.1f}%')
 
-st.dataframe(display_df, use_container_width=True, hide_index=True)
+st.dataframe(display_df, width='stretch', hide_index=True)
