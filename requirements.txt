@@ -1,7 +1,9 @@
-monochromap>=0.3.0
-raftel>=0.4.0
-floryn>=0.0.1
-lesley>=0.2.1
-streamlit==1.55.0
-st-vortree>=0.1.7
-streamlit-analytics2
+monochromap==0.3.1
+raftel==0.4.0
+floryn==0.1.0
+lesley==0.3.1
+streamlit==1.61.1
+st-vortree==0.1.8
+streamlit-analytics2==0.10.6
+Pillow==12.3.0
+numpy==2.5.1
