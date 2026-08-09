@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit_analytics2 as streamlit_analytics
+# import streamlit_analytics2 as streamlit_analytics
 
 st.set_page_config(
     page_title='Home',
@@ -17,12 +17,13 @@ page_vortree = st.Page('apps/vortree/vortree.py', title='Voronoi Treemap', icon=
 # page_csv_explorer = st.Page('apps/csv_explorer/csv_explorer.py', title='CSV Explorer', icon='📊')
 page_finplot = st.Page('apps/finplot/finplot.py', title='FinPlot', icon='💹')
 page_reddit = st.Page('apps/reddit_stats/reddit_stats.py', title='Reddit Stats', icon='🤖')
+page_report_montage = st.Page('apps/report_montage/report_montage.py', title='Annual Report Montage', icon='🖼️')
 
 pages = st.navigation(
     {
         'Home': [page_home],
         'Libraries': [page_lesley, page_floryn, page_raftel, page_monoch, page_mbg, page_vortree],
-        'Utilities': [page_finplot, page_reddit],
+        'Utilities': [page_finplot, page_reddit, page_report_montage],
     }
 )
 
@@ -42,5 +43,7 @@ def get_img_with_href(local_img_path, target_url):
 image_html = get_img_with_href('panen_dividen.svg', 'https://panendividen.com?utm_source=alexandria')
 st.sidebar.markdown(image_html, unsafe_allow_html=True)
 
-with streamlit_analytics.track():
-    pages.run()
+# with streamlit_analytics.track():
+#     pages.run()
+
+pages.run()
